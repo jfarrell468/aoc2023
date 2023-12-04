@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use util::Adjacent;
 
 #[derive(Debug)]
 struct Number {
@@ -11,7 +12,7 @@ impl Number {
     fn is_part_number(&self, s: &Schematic) -> bool {
         // println!("{:?}", self);
         for c in self.col_start..=self.col_end {
-            for (adj_r, adj_c) in s.adjacent(self.row, c) {
+            for (adj_r, adj_c) in s.raw.adjacent_to(self.row, c) {
                 // println!("{}, {}", adj_r, adj_c);
                 let adj = s.raw[adj_r][adj_c];
                 if !adj.is_ascii_digit() && adj != '.' {
@@ -23,7 +24,7 @@ impl Number {
     }
     fn get_gear(&self, s: &Schematic) -> Option<(usize, usize)> {
         for c in self.col_start..=self.col_end {
-            for (adj_r, adj_c) in s.adjacent(self.row, c) {
+            for (adj_r, adj_c) in s.raw.adjacent_to(self.row, c) {
                 if s.raw[adj_r][adj_c] == '*' {
                     return Some((adj_r, adj_c));
                 }
@@ -82,25 +83,6 @@ impl Schematic {
             raw: lines.iter().map(|l| l.chars().collect()).collect(),
             numbers,
         }
-    }
-
-    fn adjacent(&self, r: usize, c: usize) -> Vec<(usize, usize)> {
-        let mut adj = Vec::new();
-        for rdelta in [-1, 0, 1] {
-            if (rdelta == -1 && r <= 0) || (rdelta == 1 && r >= self.raw.len() - 1) {
-                continue;
-            }
-            for cdelta in [-1, 0, 1] {
-                if (cdelta == -1 && c <= 0)
-                    || (cdelta == 1 && c >= self.raw[0].len() - 1)
-                    || (rdelta == 0 && cdelta == 0)
-                {
-                    continue;
-                }
-                adj.push(((r as i32 + rdelta) as usize, (c as i32 + cdelta) as usize));
-            }
-        }
-        adj
     }
 }
 
