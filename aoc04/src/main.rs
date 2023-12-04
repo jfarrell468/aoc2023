@@ -37,7 +37,7 @@ fn main() {
     }
     println!("Part 1: {}", score);
     let mut copies = Vec::new();
-    for line in &lines {
+    for _line in &lines {
         copies.push(1_u32);
     }
     for (idx, line) in lines.iter().enumerate() {
