@@ -26,3 +26,4 @@ members = [
   "aoc24",
   "aoc25",
 ]
+resolver = "2"
