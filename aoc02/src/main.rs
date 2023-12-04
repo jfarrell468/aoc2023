@@ -5,6 +5,15 @@ struct Draw {
     b: u32,
 }
 
+impl Draw {
+    fn new() -> Draw {
+        Draw { r: 0, g: 0, b: 0 }
+    }
+    fn power(&self) -> u32 {
+        self.r * self.g * self.b
+    }
+}
+
 #[derive(Debug)]
 struct Game {
     id: u32,
@@ -19,7 +28,7 @@ impl Game {
             draws: rest
                 .split("; ")
                 .map(|draw| {
-                    let mut d = Draw { r: 0, g: 0, b: 0 };
+                    let mut d = Draw::new();
                     for count_and_color in draw.split(", ") {
                         let (count, color) = count_and_color.split_once(" ").unwrap();
                         match color {
@@ -42,6 +51,15 @@ impl Game {
         }
         true
     }
+    fn min_cubes(&self) -> Draw {
+        let mut min = Draw::new();
+        for draw in &self.draws {
+            min.r = std::cmp::max(draw.r, min.r);
+            min.g = std::cmp::max(draw.g, min.g);
+            min.b = std::cmp::max(draw.b, min.b);
+        }
+        min
+    }
 }
 
 fn main() {
@@ -50,12 +68,15 @@ fn main() {
         .map(|r| r.unwrap())
         .collect::<Vec<_>>();
     let mut sum_of_ids = 0;
+    let mut power = 0;
     for line in lines {
         let game = Game::parse(&line);
         // println!("{:?}", game);
         if game.possible() {
             sum_of_ids += game.id;
         }
+        power += game.min_cubes().power();
     }
     println!("Part 1: {}", sum_of_ids);
+    println!("Part 2: {}", power);
 }
