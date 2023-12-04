@@ -28,7 +28,7 @@ fn main() {
         .map(|r| r.unwrap())
         .collect::<Vec<_>>();
     let mut score = 0;
-    for line in lines {
+    for line in &lines {
         let g = Game::parse(&line);
         let num_matches = g.yours.iter().filter(|y| g.winning.contains(y)).count() as u32;
         if num_matches > 0 {
@@ -36,4 +36,16 @@ fn main() {
         }
     }
     println!("Part 1: {}", score);
+    let mut copies = Vec::new();
+    for line in &lines {
+        copies.push(1_u32);
+    }
+    for (idx, line) in lines.iter().enumerate() {
+        let g = Game::parse(&line);
+        let num_matches = g.yours.iter().filter(|y| g.winning.contains(y)).count() as usize;
+        for m in 1..=num_matches {
+            copies[idx + m] += copies[idx];
+        }
+    }
+    println!("Part 2: {}", copies.iter().sum::<u32>());
 }
