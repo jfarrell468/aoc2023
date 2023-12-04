@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
 struct Number {
     row: usize,
@@ -18,6 +20,16 @@ impl Number {
             }
         }
         false
+    }
+    fn get_gear(&self, s: &Schematic) -> Option<(usize, usize)> {
+        for c in self.col_start..=self.col_end {
+            for (adj_r, adj_c) in s.adjacent(self.row, c) {
+                if s.raw[adj_r][adj_c] == '*' {
+                    return Some((adj_r, adj_c));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -109,4 +121,17 @@ fn main() {
         }
     }
     println!("Part 1: {}", sum_of_part_numbers);
+    let mut gears = HashMap::new();
+    for num in &schematic.numbers {
+        if let Some((r, c)) = num.get_gear(&schematic) {
+            gears.entry((r, c)).or_insert(Vec::new()).push(num.val);
+        }
+    }
+    let mut sum_of_gear_ratios = 0;
+    for ((_r, _c), part_nums) in gears {
+        if part_nums.len() == 2 {
+            sum_of_gear_ratios += part_nums[0] * part_nums[1];
+        }
+    }
+    println!("Part 1: {}", sum_of_gear_ratios);
 }
