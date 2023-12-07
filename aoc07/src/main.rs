@@ -17,16 +17,23 @@ enum HandRank {
 
 type Hand = [u8; 5];
 trait HandTrait {
-    fn parse(h: &str) -> Hand;
+    fn parse(h: &str, jokers: bool) -> Hand;
     fn rank(&self) -> HandRank;
+    fn rank_without_jokers(&self) -> HandRank;
     fn greater(&self, other: &Self) -> bool;
 }
 
-fn char_to_u8(c: char) -> u8 {
+fn char_to_u8(c: char, jokers: bool) -> u8 {
     match c {
         '2'..='9' => c as u8 - '0' as u8,
         'T' => 10,
-        'J' => 11,
+        'J' => {
+            if jokers {
+                1
+            } else {
+                11
+            }
+        }
         'Q' => 12,
         'K' => 13,
         'A' => 14,
@@ -35,20 +42,66 @@ fn char_to_u8(c: char) -> u8 {
 }
 
 impl HandTrait for Hand {
-    fn parse(h: &str) -> Hand {
+    fn parse(h: &str, jokers: bool) -> Hand {
         assert_eq!(5, h.len());
         let chars = h.chars().collect::<Vec<_>>();
         [
-            char_to_u8(chars[0]),
-            char_to_u8(chars[1]),
-            char_to_u8(chars[2]),
-            char_to_u8(chars[3]),
-            char_to_u8(chars[4]),
+            char_to_u8(chars[0], jokers),
+            char_to_u8(chars[1], jokers),
+            char_to_u8(chars[2], jokers),
+            char_to_u8(chars[3], jokers),
+            char_to_u8(chars[4], jokers),
         ]
     }
 
     fn rank(&self) -> HandRank {
-        let (mut most_same, mut counts) =
+        let num_jokers = self.iter().filter(|c| **c == 1).count();
+        match self.rank_without_jokers() {
+            HandRank::HighCard => match num_jokers {
+                0 => HandRank::HighCard,
+                1 => HandRank::Pair,
+                2 => HandRank::ThreeOfAKind,
+                3 => HandRank::FourOfAKind,
+                4 => HandRank::FiveOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::Pair => match num_jokers {
+                0 => HandRank::Pair,
+                1 => HandRank::ThreeOfAKind,
+                2 => HandRank::ThreeOfAKind,
+                3 => HandRank::FiveOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::TwoPair => match num_jokers {
+                0 => HandRank::TwoPair,
+                1 => HandRank::FullHouse,
+                2 => HandRank::FourOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::ThreeOfAKind => match num_jokers {
+                0 => HandRank::ThreeOfAKind,
+                1 => HandRank::FourOfAKind,
+                3 => HandRank::FourOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::FullHouse => match num_jokers {
+                0 => HandRank::FullHouse,
+                2 => HandRank::FiveOfAKind,
+                3 => HandRank::FiveOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::FourOfAKind => match num_jokers {
+                0 => HandRank::FourOfAKind,
+                1 => HandRank::FiveOfAKind,
+                4 => HandRank::FiveOfAKind,
+                _ => panic!("This should never happen"),
+            },
+            HandRank::FiveOfAKind => HandRank::FiveOfAKind,
+        }
+    }
+
+    fn rank_without_jokers(&self) -> HandRank {
+        let (most_same, counts) =
             self.iter()
                 .copied()
                 .fold((0, HashMap::new()), |(mut most_same, mut map), val| {
@@ -81,13 +134,13 @@ impl HandTrait for Hand {
     }
 }
 
-fn part1(lines: &Vec<String>) -> Result<u32> {
+fn common(lines: &Vec<String>, jokers: bool) -> Result<u32> {
     let mut hands_and_bids = lines
         .iter()
         .map(|line| {
             let mut iter = line.split_whitespace();
             (
-                Hand::parse(iter.next().unwrap()),
+                Hand::parse(iter.next().unwrap(), jokers),
                 iter.next().unwrap().parse::<u32>().unwrap(),
             )
         })
@@ -108,8 +161,12 @@ fn part1(lines: &Vec<String>) -> Result<u32> {
         .sum())
 }
 
+fn part1(lines: &Vec<String>) -> Result<u32> {
+    common(lines, false)
+}
+
 fn part2(lines: &Vec<String>) -> Result<u32> {
-    Ok(0)
+    common(lines, true)
 }
 
 fn main() -> Result<()> {
@@ -140,27 +197,36 @@ mod tests {
 
     #[test]
     fn test_char_to_u8() {
-        assert_eq!(char_to_u8('5'), 5);
-        assert_eq!(char_to_u8('T'), 10);
-        assert_eq!(char_to_u8('J'), 11);
-        assert_eq!(char_to_u8('Q'), 12);
-        assert_eq!(char_to_u8('K'), 13);
-        assert_eq!(char_to_u8('A'), 14);
+        assert_eq!(char_to_u8('5', false), 5);
+        assert_eq!(char_to_u8('T', false), 10);
+        assert_eq!(char_to_u8('J', false), 11);
+        assert_eq!(char_to_u8('Q', false), 12);
+        assert_eq!(char_to_u8('K', false), 13);
+        assert_eq!(char_to_u8('A', false), 14);
+
+        assert_eq!(char_to_u8('T', true), 10);
+        assert_eq!(char_to_u8('J', true), 1);
     }
 
     #[test]
     fn test_hand() {
-        assert_eq!(Hand::parse("32T3K"), [3, 2, 10, 3, 13]);
+        assert_eq!(Hand::parse("32T3K", false), [3, 2, 10, 3, 13]);
 
-        assert_eq!(Hand::parse("32T3K").rank(), HandRank::Pair);
-        assert_eq!(Hand::parse("T55J5").rank(), HandRank::ThreeOfAKind);
-        assert_eq!(Hand::parse("KK677").rank(), HandRank::TwoPair);
-        assert_eq!(Hand::parse("KTJJT").rank(), HandRank::TwoPair);
-        assert_eq!(Hand::parse("QQQJA").rank(), HandRank::ThreeOfAKind);
+        assert_eq!(Hand::parse("32T3K", false).rank(), HandRank::Pair);
+        assert_eq!(Hand::parse("T55J5", false).rank(), HandRank::ThreeOfAKind);
+        assert_eq!(Hand::parse("KK677", false).rank(), HandRank::TwoPair);
+        assert_eq!(Hand::parse("KTJJT", false).rank(), HandRank::TwoPair);
+        assert_eq!(Hand::parse("QQQJA", false).rank(), HandRank::ThreeOfAKind);
 
-        assert!(Hand::parse("QQQJA").greater(&Hand::parse("KK677")));
-        assert!(Hand::parse("KK677").greater(&Hand::parse("KTJJT")));
-        assert!(Hand::parse("QQQJA").greater(&Hand::parse("T55J5")));
+        assert!(Hand::parse("QQQJA", false).greater(&Hand::parse("KK677", false)));
+        assert!(Hand::parse("KK677", false).greater(&Hand::parse("KTJJT", false)));
+        assert!(Hand::parse("QQQJA", false).greater(&Hand::parse("T55J5", false)));
+
+        assert_eq!(Hand::parse("32T3K", true).rank(), HandRank::Pair);
+        assert_eq!(Hand::parse("T55J5", true).rank(), HandRank::FourOfAKind);
+        assert_eq!(Hand::parse("KK677", true).rank(), HandRank::TwoPair);
+        assert_eq!(Hand::parse("KTJJT", true).rank(), HandRank::FourOfAKind);
+        assert_eq!(Hand::parse("QQQJA", true).rank(), HandRank::FourOfAKind);
     }
 
     #[test]
@@ -176,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_part2() -> Result<()> {
-        assert_eq!(part2(&lines())?, 0);
+        assert_eq!(part2(&lines())?, 5905);
         Ok(())
     }
 }
